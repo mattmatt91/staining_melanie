@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib import Path
 from time import time
 from datetime import datetime
+from matplotlib import pyplot as plt
 
 
 def scan_folder(path_data):
@@ -100,6 +101,7 @@ def show_tifs(dict_tifs):
 def compare(dict_arrays, dict_thresholds):
     counter_com = 0
     counter_neuron = 0
+    counter_product = 0
     threshold_neuron = dict_thresholds['neuron']
     threshold_protein = dict_thresholds['protein']
 
@@ -116,11 +118,11 @@ def compare(dict_arrays, dict_thresholds):
                 counter_neuron += 1
             if col_protein >= threshold_protein and col_neuron >= threshold_neuron:
                 counter_com += 1
+                counter_product += col_protein * col_neuron
                 array_compare[r][c] = (col_protein+col_neuron)//2
             else:
                 array_compare[r][c] = 0
-        
-    return array_compare, counter_com, counter_neuron
+    return array_compare, counter_com, counter_neuron, counter_product
     
     
 def print_dict(dict):
@@ -158,6 +160,19 @@ def save_tif(tif, path_data, name, current_time):
     tif.save(path_tif, compression='raw')
 
 
+
+def save_fig(fig, path_data, name, current_time):
+    path_results = path.join(path_data, "results"+ current_time)
+    path_results = Path(path_results)
+    path_results.mkdir(parents=True, exist_ok=True)
+    name = name + '.png'
+    path_fig = path.join(path_results, name)
+    # print(path_fig)
+    fig_2 = fig.get_figure()
+    fig_2.savefig(path_fig)
+
+
+
 def save_result(list_result, dict_thresholds,current_time, path):
     df_result= pd.DataFrame(list_result)
 
@@ -169,6 +184,11 @@ def save_result(list_result, dict_thresholds,current_time, path):
     path_csv = path.join(path_results, file_name)
     df_result.to_csv(path_csv, sep='\t', index=False)
 
+    df_result.set_index('name', inplace=True)
+    for i in df_result:
+        fig = df_result[i].plot.bar(rot=0, title=i)
+        # plt.show()
+        save_fig(fig, path_data, i, current_time)
 
 def main(path_data, dict_thresholds, dict_colors):
     print(path_data)
@@ -178,14 +198,14 @@ def main(path_data, dict_thresholds, dict_colors):
     path_dict = scan_folder(path_data)
     list_result = []
 
-    for i in path_dict:
+    for i, n in zip(path_dict, range(len(path_dict)-3)):
         start = time()
         try:
             print('reading {0}...'.format(i))
             dict_tifs = read_files(path_dict[i])
             dict_arrays = to_array_raw(dict_tifs)
-            comparison, overlap_counts, neuron_counts = compare(dict_arrays, dict_thresholds)
-            this_result = {'name': i, 'counts_neuron': neuron_counts, 'counts_overlap': overlap_counts, 'ratio': overlap_counts/neuron_counts}
+            comparison, overlap_counts, neuron_counts, counter_product = compare(dict_arrays, dict_thresholds)
+            this_result = {'name': i, 'counts_neuron': neuron_counts, 'counts_overlap': overlap_counts, 'ratio': overlap_counts/neuron_counts,'counter_product': counter_product}
             list_result.append(this_result)
             print(this_result)
             tif_compare = to_bw(comparison)
