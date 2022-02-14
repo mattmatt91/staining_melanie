@@ -1,2 +1,0 @@
-messung 1	messung 2	messung 3	messung 4	messung 5	messung 6	th_protein	th_neuron
-139	174	5	90	1271	330	30	50
